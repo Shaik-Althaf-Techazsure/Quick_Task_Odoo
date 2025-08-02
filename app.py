@@ -253,7 +253,6 @@ def dashboard():
     elif current_user.role == 'support_agent':
         query = Ticket.query
         
-        # Filtering logic for agents
         status = request.args.get('status')
         if status:
             query = query.filter(Ticket.status == status)
@@ -265,14 +264,11 @@ def dashboard():
                 (Ticket.description.ilike(f'%{search_query}%'))
             )
             
-        # Separate queries for assigned and unassigned tickets
-        assigned_tickets_count = query.filter(Ticket.assigned_to_id == current_user.id).count()
-        unassigned_tickets_count = query.filter(Ticket.assigned_to_id.is_(None)).count()
+        assigned_tickets_count = Ticket.query.filter(Ticket.assigned_to_id == current_user.id).count()
+        unassigned_tickets_count = Ticket.query.filter(Ticket.assigned_to_id.is_(None)).count()
         
-        # Main query for the table, showing all tickets for agents
         all_tickets = query.order_by(Ticket.created_at.desc()).all()
         
-        # Get data for the status chart
         status_ticket_counts = db.session.query(Ticket.status, func.count(Ticket.id)).group_by(Ticket.status).all()
         status_labels = [s[0].title() for s in status_ticket_counts]
         status_data = [s[1] for s in status_ticket_counts]
