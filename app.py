@@ -73,6 +73,7 @@ class User(db.Model, UserMixin):
     residential_address = db.Column(db.String(255), nullable=True)
     education_details = db.Column(db.Text, nullable=True)
     occupation_details = db.Column(db.String(100), nullable=True)
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     tickets = db.relationship('Ticket', backref='author', lazy=True, foreign_keys='[Ticket.user_id]')
     assigned_tickets = db.relationship('Ticket', backref='assignee', lazy=True, foreign_keys='[Ticket.assigned_to_id]')
@@ -232,7 +233,6 @@ def dashboard():
         users = User.query.all()
         pending_requests = UpgradeRequest.query.filter_by(status='pending').all()
         
-        # Get data for analytics charts
         category_ticket_counts = db.session.query(Category.name, func.count(Ticket.id)).join(Ticket).group_by(Category.name).all()
         status_ticket_counts = db.session.query(Ticket.status, func.count(Ticket.id)).group_by(Ticket.status).all()
         
@@ -251,8 +251,40 @@ def dashboard():
                                status_labels=status_labels,
                                status_data=status_data)
     elif current_user.role == 'support_agent':
-        tickets = Ticket.query.all()
-        return render_template('agent_dashboard.html', tickets=tickets)
+        query = Ticket.query
+        
+        # Filtering logic for agents
+        status = request.args.get('status')
+        if status:
+            query = query.filter(Ticket.status == status)
+
+        search_query = request.args.get('search')
+        if search_query:
+            query = query.filter(
+                (Ticket.subject.ilike(f'%{search_query}%')) |
+                (Ticket.description.ilike(f'%{search_query}%'))
+            )
+            
+        # Separate queries for assigned and unassigned tickets
+        assigned_tickets_count = query.filter(Ticket.assigned_to_id == current_user.id).count()
+        unassigned_tickets_count = query.filter(Ticket.assigned_to_id.is_(None)).count()
+        
+        # Main query for the table, showing all tickets for agents
+        all_tickets = query.order_by(Ticket.created_at.desc()).all()
+        
+        # Get data for the status chart
+        status_ticket_counts = db.session.query(Ticket.status, func.count(Ticket.id)).group_by(Ticket.status).all()
+        status_labels = [s[0].title() for s in status_ticket_counts]
+        status_data = [s[1] for s in status_ticket_counts]
+
+        return render_template('agent_dashboard.html', 
+                               all_tickets=all_tickets, 
+                               assigned_tickets_count=assigned_tickets_count,
+                               unassigned_tickets_count=unassigned_tickets_count,
+                               status_labels=status_labels,
+                               status_data=status_data,
+                               search_query=search_query,
+                               status=status)
     else:
         query = Ticket.query.filter_by(user_id=current_user.id)
         show_open = request.args.get('show_open', 'off') == 'on'
