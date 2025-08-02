@@ -154,42 +154,48 @@
         const statusData = {{ status_data | tojson }};
 
         // Chart for Tickets by Status (Doughnut Chart)
-        const statusCtx = document.getElementById('statusChart').getContext('2d');
-        const statusChart = new Chart(statusCtx, {
-            type: 'doughnut',
-            data: {
-                labels: statusLabels,
-                datasets: [{
-                    label: 'Tickets by Status',
-                    data: statusData,
-                    backgroundColor: [
-                        '#007bff', // Open
-                        '#ffc107', // In Progress
-                        '#28a745', // Resolved
-                        '#dc3545', // Closed
-                    ],
-                    borderColor: '#ffffff',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            boxWidth: 20,
-                            padding: 20
+        if (statusData.some(d => d > 0)) { // Only render if there's data
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            const statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        label: 'Tickets by Status',
+                        data: statusData,
+                        backgroundColor: [
+                            '#007bff', // Open
+                            '#ffc107', // In Progress
+                            '#28a745', // Resolved
+                            '#dc3545', // Closed
+                        ],
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 20,
+                                padding: 20
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Overall Ticket Status Distribution'
                         }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Overall Ticket Status Distribution'
                     }
-                }
-            },
-        });
+                },
+            });
+        } else {
+            // Display a message if no data exists
+            const chartContainer = document.getElementById('statusChart').parentElement;
+            chartContainer.innerHTML = '<p class="text-center text-muted mt-3">No ticket data available for analytics.</p>';
+        }
     });
 </script>
 {% endblock %}
