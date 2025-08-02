@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm p-4">
+                <h2 class="text-center mb-4 dashboard-title">Ask a Question</h2>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form action="{{ url_for('ask_question') }}" method="post" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="subject">Question</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-question-circle"></i></span>
+                            </div>
+                            <input type="text" class="form-control" id="subject" name="subject" placeholder="Enter your question here..." required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                            </div>
+                            <textarea class="form-control" id="description" name="description" rows="5" placeholder="Provide more details about your question..." required></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="category_id">Category</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-tags"></i></span>
+                            </div>
+                            <select class="form-control" id="category_id" name="category_id" required>
+                                <option value="" disabled selected>Select a category...</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="file-upload-container">
+                        <label for="attachments">Attach Files (Max 5)</label>
+                        <div class="form-group file-group">
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fas fa-paperclip"></i></span>
+                                </div>
+                                <input type="file" class="form-control-file" name="attachment[]">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="btn btn-secondary btn-sm mt-2" id="add-more-files">Add More Files</button>
+                    
+                    <button type="submit" class="btn btn-primary btn-block mt-4">Post Question</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileContainer = document.getElementById('file-upload-container');
+        const addMoreButton = document.getElementById('add-more-files');
+        let fileCount = 1;
+
+        addMoreButton.addEventListener('click', function() {
+            if (fileCount < 5) {
+                const newFileGroup = document.createElement('div');
+                newFileGroup.className = 'form-group file-group mt-2';
+                newFileGroup.innerHTML = `
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-paperclip"></i></span>
+                        </div>
+                        <input type="file" class="form-control-file" name="attachment[]">
+                    </div>
+                `;
+                fileContainer.appendChild(newFileGroup);
+                fileCount++;
+            }
+            if (fileCount >= 5) {
+                addMoreButton.style.display = 'none';
+            }
+        });
+    });
+</script>
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+{% endblock %}

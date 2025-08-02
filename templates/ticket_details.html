@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="dashboard-title">{{ ticket.subject }}</h2>
+                    <p class="text-muted">
+                        <span class="badge badge-primary">{{ ticket.status.title() }}</span>
+                        <span class="ml-2">Posted on {{ ticket.created_at.strftime('%B %d, %Y') }}</span>
+                    </p>
+                    <hr>
+                    <p class="card-text">{{ ticket.description }}</p>
+                    <hr>
+                    {% if ticket.attachments %}
+                    <h5 class="section-title">Attachments</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for attachment in ticket.attachments %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <i class="fas fa-file-alt mr-2"></i>
+                            <a href="{{ url_for('static', filename='attachments/' + attachment.filename) }}" target="_blank">
+                                {{ attachment.filename }}
+                            </a>
+                            <a href="{{ url_for('static', filename='attachments/' + attachment.filename) }}" download class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Comments ({{ ticket.comments|length }})</h5>
+                </div>
+                <div class="card-body">
+                    {% for comment in ticket.comments %}
+                    <div class="card mb-3 {% if comment.commenter.id == ticket.author.id %}bg-light border-primary{% else %}bg-white{% endif %}">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-0">{{ comment.commenter.name or comment.commenter.username }}</h6>
+                                    <small class="text-muted">{{ comment.commenter.role.title() }} &bull; {{ comment.created_at.strftime('%B %d, %Y at %I:%M %p') }}</small>
+                                </div>
+                                <img src="{{ url_for('static', filename='profile_pics/' + comment.commenter.profile_image) }}" alt="Profile" class="rounded-circle" width="40" height="40">
+                            </div>
+                            <p class="mt-2 mb-0">{{ comment.content }}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-center text-muted">No comments yet. Be the first to reply!</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Add a Comment</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('ticket_details', ticket_id=ticket.id) }}" method="post">
+                        <div class="form-group">
+                            <textarea class="form-control" name="comment_content" rows="3" placeholder="Write your comment here..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-2">Post Comment</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            {% if current_user.role in ['admin', 'support_agent'] %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Agent Actions</h5>
+                </div>
+                <div class="card-body">
+                    {% if not ticket.assigned_to_id %}
+                    <form action="{{ url_for('ticket_details', ticket_id=ticket.id) }}" method="post" class="mb-3">
+                        <input type="hidden" name="assign_to_me">
+                        <button type="submit" class="btn btn-success btn-block">Assign to Me</button>
+                    </form>
+                    {% else %}
+                    <p class="text-success mb-3">
+                        <i class="fas fa-check-circle"></i> This ticket is assigned to
+                        <span class="font-weight-bold">{{ ticket.assignee.username }}</span>.
+                    </p>
+                    {% endif %}
+
+                    <h6 class="mt-4">Update Status</h6>
+                    <form action="{{ url_for('ticket_details', ticket_id=ticket.id) }}" method="post">
+                        <div class="form-group">
+                            <select name="new_status" class="form-control">
+                                <option value="open" {% if ticket.status == 'open' %}selected{% endif %}>Open</option>
+                                <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="resolved" {% if ticket.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                                <option value="closed" {% if ticket.status == 'closed' %}selected{% endif %}>Closed</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Update Status</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">User Information</h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="{{ url_for('static', filename='profile_pics/' + ticket.author.profile_image) }}" alt="User Profile" class="rounded-circle mb-3" width="100" height="100">
+                    <h5 class="card-title">{{ ticket.author.name or ticket.author.username }}</h5>
+                    <p class="text-muted">{{ ticket.author.role.title() }}</p>
+                    <p class="text-muted">Member since {{ ticket.author.joined_at.strftime('%B %d, %Y') if ticket.author.joined_at else 'N/A' }}</p>
+                    <hr>
+                    <p class="text-left"><strong>Email:</strong> {{ ticket.author.email_id }}</p>
+                    <p class="text-left"><strong>Mobile:</strong> {{ ticket.author.mobile_number }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+{% endblock %}

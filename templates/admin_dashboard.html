@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-5">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2 class="dashboard-title">Admin Dashboard</h2>
+            <p class="text-muted">A comprehensive overview of your QuickDesk application.</p>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title text-uppercase">Total Tickets</h5>
+                            <h3 class="card-text">{{ tickets|length }}</h3>
+                        </div>
+                        <i class="fas fa-ticket-alt fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title text-uppercase">Total Users</h5>
+                            <h3 class="card-text">{{ users|length }}</h3>
+                        </div>
+                        <i class="fas fa-users fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-white shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title text-uppercase">Pending Requests</h5>
+                            <h3 class="card-text">{{ pending_requests|length }}</h3>
+                        </div>
+                        <i class="fas fa-user-plus fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Tickets by Status</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" style="height:250px;"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Tickets by Category</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryChart" style="height:250px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">All Tickets</h5>
+                    <a href="{{ url_for('manage_categories') }}" class="btn btn-sm btn-light">Manage Categories</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Subject</th>
+                                    <th>Status</th>
+                                    <th>Category</th>
+                                    <th>User</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ticket in tickets %}
+                                <tr>
+                                    <td>{{ ticket.id }}</td>
+                                    <td><a href="{{ url_for('ticket_details', ticket_id=ticket.id) }}">{{ ticket.subject }}</a></td>
+                                    <td><span class="badge badge-secondary">{{ ticket.status.title() }}</span></td>
+                                    <td>{{ ticket.category.name if ticket.category else 'N/A' }}</td>
+                                    <td>{{ ticket.author.username }}</td>
+                                    <td>
+                                        <a href="{{ url_for('ticket_details', ticket_id=ticket.id) }}" class="btn btn-sm btn-info">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">User Roles</h5>
+                    <a href="{{ url_for('manage_users') }}" class="btn btn-sm btn-light">Manage Users</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td>{{ user.id }}</td>
+                                    <td>{{ user.username }}</td>
+                                    <td>{{ user.email_id }}</td>
+                                    <td><span class="badge badge-secondary">{{ user.role.title() }}</span></td>
+                                    <td>
+                                        <form action="{{ url_for('manage_users') }}" method="post" class="form-inline">
+                                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                                            <select name="new_role" class="form-control form-control-sm mr-2">
+                                                <option value="end_user" {% if user.role == 'end_user' %}selected{% endif %}>End User</option>
+                                                <option value="support_agent" {% if user.role == 'support_agent' %}selected{% endif %}>Support Agent</option>
+                                                <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-success">Update Role</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Pending Upgrade Requests</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User</th>
+                                    <th>Requested At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in pending_requests %}
+                                <tr>
+                                    <td>{{ request.id }}</td>
+                                    <td>{{ request.user.username }}</td>
+                                    <td>{{ request.requested_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        <form action="{{ url_for('manage_requests', request_id=request.id, action='accept') }}" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-success">Accept</button>
+                                        </form>
+                                        <form action="{{ url_for('manage_requests', request_id=request.id, action='reject') }}" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Data from Flask
+        const categoryLabels = {{ category_labels | tojson }};
+        const categoryData = {{ category_data | tojson }};
+        const statusLabels = {{ status_labels | tojson }};
+        const statusData = {{ status_data | tojson }};
+
+        // Chart for Tickets by Status (Pie Chart)
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        const statusChart = new Chart(statusCtx, {
+            type: 'pie',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    label: 'Tickets by Status',
+                    data: statusData,
+                    backgroundColor: [
+                        '#007bff', // Open
+                        '#ffc107', // In Progress
+                        '#28a745', // Resolved
+                        '#dc3545', // Closed
+                    ],
+                    borderColor: [
+                        '#ffffff',
+                        '#ffffff',
+                        '#ffffff',
+                        '#ffffff',
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Ticket Status Distribution'
+                    }
+                }
+            },
+        });
+
+        // Chart for Tickets by Category (Bar Chart)
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        const categoryChart = new Chart(categoryCtx, {
+            type: 'bar',
+            data: {
+                labels: categoryLabels,
+                datasets: [{
+                    label: 'Number of Tickets',
+                    data: categoryData,
+                    backgroundColor: '#17a2b8',
+                    borderColor: '#17a2b8',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    title: {
+                        display: true,
+                        text: 'Tickets by Category'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Count'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Category'
+                        }
+                    }
+                }
+            },
+        });
+    });
+</script>
+{% endblock %}

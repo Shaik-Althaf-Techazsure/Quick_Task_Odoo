@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users - QuickDesk</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="form-container">
+        <header>
+            <h1>Manage Users</h1>
+            <a href="{{ url_for('dashboard') }}" class="button">Back to Dashboard</a>
+        </header>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul class=flashes>
+        {% for message in messages %}
+            <li>{{ message }}</li>
+        {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+        <ul class="user-list">
+            {% for user in users %}
+            <li class="user-item">
+                <span>{{ user.username }} ({{ user.role.replace('_', ' ').title() }})</span>
+                <form action="{{ url_for('manage_users') }}" method="post" class="role-form">
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <select name="new_role">
+                        <option value="end_user" {% if user.role == 'end_user' %}selected{% endif %}>End User</option>
+                        <option value="support_agent" {% if user.role == 'support_agent' %}selected{% endif %}>Support Agent</option>
+                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                    </select>
+                    <button type="submit">Update Role</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>

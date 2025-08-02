@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Categories - QuickDesk</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="form-container">
+        <header>
+            <h1>Manage Categories</h1>
+            <a href="{{ url_for('dashboard') }}" class="button">Back to Dashboard</a>
+        </header>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul class=flashes>
+        {% for message in messages %}
+            <li>{{ message }}</li>
+        {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+        <form action="{{ url_for('manage_categories') }}" method="post">
+            <label for="name">New Category Name:</label>
+            <input type="text" id="name" name="name" required>
+            <button type="submit">Add Category</button>
+        </form>
+        <hr>
+        <h3>Existing Categories</h3>
+        <ul class="category-list">
+            {% for category in categories %}
+                <li>{{ category.name }}</li>
+            {% else %}
+                <li>No categories found.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>

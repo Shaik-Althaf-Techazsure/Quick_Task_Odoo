@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Dashboard - QuickDesk</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header>
+            <h1>Agent Dashboard</h1>
+            <nav>
+                <a href="{{ url_for('ask_question') }}" class="button">Ask a Question</a>
+                <a href="{{ url_for('logout') }}" class="button">Logout</a>
+            </nav>
+        </header>
+        <div class="ticket-list">
+            <h3>All Tickets</h3>
+            {% if tickets %}
+                {% for ticket in tickets %}
+                <a href="{{ url_for('ticket_details', ticket_id=ticket.id) }}" class="ticket-card-link">
+                    <div class="ticket-card">
+                        <h4>{{ ticket.subject }}</h4>
+                        <p>Status: <span class="status-{{ ticket.status }}">{{ ticket.status.title() }}</span></p>
+                        <p>Created by: {{ ticket.author.username }} on {{ ticket.created_at.strftime('%Y-%m-%d') }}</p>
+                    </div>
+                </a>
+                {% endfor %}
+            {% else %}
+                <p>No tickets have been submitted yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
