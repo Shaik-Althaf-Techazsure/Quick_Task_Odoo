@@ -1,36 +1,195 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Dashboard - QuickDesk</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="dashboard-container">
-        <header>
-            <h1>Agent Dashboard</h1>
-            <nav>
-                <a href="{{ url_for('ask_question') }}" class="button">Ask a Question</a>
-                <a href="{{ url_for('logout') }}" class="button">Logout</a>
-            </nav>
-        </header>
-        <div class="ticket-list">
-            <h3>All Tickets</h3>
-            {% if tickets %}
-                {% for ticket in tickets %}
-                <a href="{{ url_for('ticket_details', ticket_id=ticket.id) }}" class="ticket-card-link">
-                    <div class="ticket-card">
-                        <h4>{{ ticket.subject }}</h4>
-                        <p>Status: <span class="status-{{ ticket.status }}">{{ ticket.status.title() }}</span></p>
-                        <p>Created by: {{ ticket.author.username }} on {{ ticket.created_at.strftime('%Y-%m-%d') }}</p>
-                    </div>
-                </a>
-                {% endfor %}
-            {% else %}
-                <p>No tickets have been submitted yet.</p>
-            {% endif %}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-5">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2 class="dashboard-title">Agent Dashboard</h2>
+            <p class="text-muted">Manage all incoming tickets and your assigned tasks.</p>
         </div>
     </div>
-</body>
-</html>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title text-uppercase">Total Tickets</h5>
+                            <h3 class="card-text">{{ all_tickets|length }}</h3>
+                        </div>
+                        <i class="fas fa-ticket-alt fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title text-uppercase">Assigned Tickets</h5>
+                            <h3 class="card-text">{{ assigned_tickets_count }}</h3>
+                        </div>
+                        <i class="fas fa-user-check fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-white shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title text-uppercase">Unassigned Tickets</h5>
+                            <h3 class="card-text">{{ unassigned_tickets_count }}</h3>
+                        </div>
+                        <i class="fas fa-user-plus fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Ticket Status Analytics</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" style="height:300px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="filter-bar">
+                <form action="{{ url_for('dashboard') }}" method="get" class="form-inline">
+                    <div class="form-group mb-2 mr-sm-2">
+                        <label for="search" class="sr-only">Search</label>
+                        <input type="text" class="form-control" id="search" name="search" placeholder="Search tickets..." value="{{ search_query or '' }}">
+                    </div>
+                    <div class="form-group mb-2 mr-sm-2">
+                        <label for="status" class="sr-only">Status</label>
+                        <select class="form-control" id="status" name="status">
+                            <option value="">All Statuses</option>
+                            <option value="open" {% if status == 'open' %}selected{% endif %}>Open</option>
+                            <option value="in_progress" {% if status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="resolved" {% if status == 'resolved' %}selected{% endif %}>Resolved</option>
+                            <option value="closed" {% if status == 'closed' %}selected{% endif %}>Closed</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary mb-2">Filter</button>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mb-2 ml-2">Reset</a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Ticket List</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Subject</th>
+                                    <th>Status</th>
+                                    <th>Category</th>
+                                    <th>Assigned To</th>
+                                    <th>Posted By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ticket in all_tickets %}
+                                <tr>
+                                    <td>{{ ticket.id }}</td>
+                                    <td><a href="{{ url_for('ticket_details', ticket_id=ticket.id) }}">{{ ticket.subject }}</a></td>
+                                    <td><span class="badge badge-secondary">{{ ticket.status.title() }}</span></td>
+                                    <td>{{ ticket.category.name if ticket.category else 'N/A' }}</td>
+                                    <td>{{ ticket.assignee.username if ticket.assignee else 'Unassigned' }}</td>
+                                    <td>{{ ticket.author.username }}</td>
+                                    <td>
+                                        <a href="{{ url_for('ticket_details', ticket_id=ticket.id) }}" class="btn btn-sm btn-info">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if not all_tickets %}
+                        <p class="text-center text-muted mt-3">No tickets found matching your criteria.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Data from Flask
+        const statusLabels = {{ status_labels | tojson }};
+        const statusData = {{ status_data | tojson }};
+
+        // Chart for Tickets by Status (Doughnut Chart)
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        const statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    label: 'Tickets by Status',
+                    data: statusData,
+                    backgroundColor: [
+                        '#007bff', // Open
+                        '#ffc107', // In Progress
+                        '#28a745', // Resolved
+                        '#dc3545', // Closed
+                    ],
+                    borderColor: '#ffffff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 20,
+                            padding: 20
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Overall Ticket Status Distribution'
+                    }
+                }
+            },
+        });
+    });
+</script>
+{% endblock %}
